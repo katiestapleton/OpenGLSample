@@ -1,21 +1,36 @@
-﻿#include <iostream>         // cout, cerr
+﻿ /*
+Katie Stapleton
+SNHU CS 330
+Mod3 Assignment
+05/22/2021
+*/
+#include <iostream>         // cout, cerr
 #include <cstdlib>          // EXIT_FAILURE
 #include <GL/glew.h>        // GLEW library
 #include <GLFW/glfw3.h>     // GLFW library
 
-using namespace std; // Uses the standard namespace
+// GLM Math Header inclusions
+#include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+using namespace std; // Standard namespace
+
+/*Shader program Macro*/
+#ifndef GLSL
+#define GLSL(Version, Source) "#version " #Version " core \n" #Source
+#endif
 
 // Unnamed namespace
 namespace
 {
-    const char* const WINDOW_TITLE = "Inverted BowTie"; // Macro for window title
+    const char* const WINDOW_TITLE = "Tutorial 3.5"; // Macro for window title
 
     // Variables for window width and height
-    const int WINDOW_WIDTH = 600;
-    const int WINDOW_HEIGHT = 400;
+    const int WINDOW_WIDTH = 800;
+    const int WINDOW_HEIGHT = 600;
 
-    // Stores the GL data relative to a given mesh.
-    // Assigns "ID" needed to active and destroy VAOs/VBOs
+    // Stores the GL data relative to a given mesh
     struct GLMesh
     {
         GLuint vao;         // Handle for the vertex array object
@@ -46,30 +61,39 @@ bool UCreateShaderProgram(const char* vtxShaderSource, const char* fragShaderSou
 void UDestroyShaderProgram(GLuint programId);
 
 
-// Vertex Shader Program Source Code
-// note: aPos- NDC coordinations as a 3D vector
-const char* vertexShaderSource = "#version 440 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"layout (location = 1) in vec4 colorFromVBO;\n"
-"out vec4 colorFromVS;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-"   colorFromVS = colorFromVBO;\n"
-"}\n\0";
+/* Vertex Shader Source Code*/
+const GLchar* vertexShaderSource = GLSL(440,
+    layout(location = 0) in vec3 position; // Vertex data from Vertex Attrib Pointer 0
+layout(location = 1) in vec4 color;  // Color data from Vertex Attrib Pointer 1
+
+out vec4 vertexColor; // variable to transfer color data to the fragment shader
+
+//Global variables for the  transform matrices
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+void main()
+{
+    gl_Position = projection * view * model * vec4(position, 1.0f); // transforms vertices to clip coordinates
+    vertexColor = color; // references incoming color data
+}
+);
 
 
-// Fragment Shader Program Source Code
-const char* fragmentShaderSource = "#version 440 core\n"
-"in vec4 colorFromVS;\n"
-"out vec4 FragColor;\n"
-"void main()\n"
-"{\n"
-"   FragColor = colorFromVS;\n"
-"}\n\0";
+/* Fragment Shader Source Code*/
+const GLchar* fragmentShaderSource = GLSL(440,
+    in vec4 vertexColor; // Variable to hold incoming color data from vertex shader
+
+out vec4 fragmentColor;
+
+void main()
+{
+    fragmentColor = vec4(vertexColor);
+}
+);
 
 
-// main function. Entry point to the OpenGL program
 int main(int argc, char* argv[])
 {
     if (!UInitialize(argc, argv, &gWindow))
@@ -82,7 +106,7 @@ int main(int argc, char* argv[])
     if (!UCreateShaderProgram(vertexShaderSource, fragmentShaderSource, gProgramId))
         return EXIT_FAILURE;
 
-    // Sets background color to black
+    // Sets the background color of the window to black (it will be implicitely used by glClear)
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
     // render loop
@@ -172,20 +196,50 @@ void UResizeWindow(GLFWwindow* window, int width, int height)
 // Functioned called to render a frame
 void URender()
 {
-    // Clear the background. set background to black
+    // Enable z-depth
+    glEnable(GL_DEPTH_TEST);
+
+    // Clear the frame and z buffers
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // 1. Scales the object by 2
+    glm::mat4 scale = glm::scale(glm::vec3(2.0f, 2.0f, 2.0f));
+    // 2. Rotates shape by 15 degrees in the x axis
+    glm::mat4 rotation = glm::rotate(45.0f, glm::vec3(0.5, 1.0f, 0.25f));
+    // 3. Place object at the origin
+    glm::mat4 translation = glm::translate(glm::vec3(0.0f, 0.0f, 0.0f));
+    // Model matrix: transformations are applied right-to-left order
+    glm::mat4 model = translation * rotation * scale;
+
+    // Transforms the camera: move the camera back (z axis)
+    glm::mat4 view = glm::translate(glm::vec3(0.0f, 0.0f, -5.0f));
+
+    // Creates a perspective projection
+ //   glm::mat4 projection = glm::perspective(45.0f, (GLfloat)WINDOW_WIDTH / (GLfloat)WINDOW_HEIGHT, 0.1f, 100.0f);
+
+    // Creates a orthographic projection
+    glm::mat4 projection = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.1f, 100.0f);
 
     // Set the shader to be used
     glUseProgram(gProgramId);
 
+    // Retrieves and passes transform matrices to the Shader program
+    GLint modelLoc = glGetUniformLocation(gProgramId, "model");
+    GLint viewLoc = glGetUniformLocation(gProgramId, "view");
+    GLint projLoc = glGetUniformLocation(gProgramId, "projection");
+
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
     // Activate the VBOs contained within the mesh's VAO
     glBindVertexArray(gMesh.vao);
 
-    // Draws the triangle(s)
+    // Draws the triangles
     glDrawElements(GL_TRIANGLES, gMesh.nIndices, GL_UNSIGNED_SHORT, NULL); // Draws the triangle
 
-    // Deactivate the VAO
+    // Deactivate the Vertex Array Object
     glBindVertexArray(0);
 
     // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -193,49 +247,35 @@ void URender()
 }
 
 
-// transfers vertices containing the location and color of triangle to GPU
 // Implements the UCreateMesh function
 void UCreateMesh(GLMesh& mesh)
 {
-    // Specifies Normalized Device Coordinates (x,y,z) and color (r,g,b,a) for triangle vertices
-    /* remember: Screen into NDC: 
-           NDC positions: -1 to 1 (left to right). -1 to 1 (bottom to top)  
-           x width = (x / screen width - 0.5) * 2
-           y height = (y / screen height - 0.5) * -2
-    */
-    
-    GLfloat verts[] =
-    {
-        // Builds two 90deg triangles
-        // Each index # refers to a point location and its color
-        // Left triangle indices: 0, 1, 2
-        // Right triangle indices: 2, 3, 4
-
-        // index 0
-        -1.0f, 1.0f, 0.0f,      // far left, top of screen
-        1.0f, 0.0f, 0.0f, 1.0f, // red
-
-        // index 1
-        -1.0f, 0.0f, 0.0f,     // far left, center(h) of screen
-        0.0f, 0.0f, 1.0f, 1.0f, // blue
-
-        // index 2 (shared point)
-        -0.5f, 0.0f, 0.0f,      // left quarter, center(h) of screen
-        0.0f, 1.0f, 0.0f, 1.0f, // green
-
-        // index 3
-        0.0f, 0.0f, 0.0f,       // center, center of screen. 
-        1.0f, 0.0f, 0.0f, 1.0f, // red
-
-        // index 4
-        0.0f, -1.0f, 0.0f,      // center(w), bottom of screen
-        0.0f, 1.0f, 0.0f, 1.0f  // green
-
+    // Using indexed drawing- store only the unique vertices and then specify the order at which we want to draw these vertices in.
+    // Position and Color data of pyramid
+    GLfloat verts[] = {
+        // Vertex Positions    // Colors (r,g,b,a)
+         0.0f,  0.5f, 0.0f,   1.0f, 0.5f, 0.0f, 1.0f, // V0 Top center vertex
+         0.5f, -0.5f, 0.5f,   0.0f, 1.0f, 0.5f, 1.0f, // V1 Front Bottom-Right
+        -0.5f, -0.5f, 0.5f,   0.5f, 0.0f, 1.0f, 1.0f, // V2 Front Bottom-Left
+        
+         0.5f,  -0.5f, -0.5f,   1.0f, 0.0f, 1.0f, 1.0f, // V3 Back bottom-right
+         -0.5f, -0.5f, -0.5f,  0.5f, 0.5f, 1.0f, 1.0f, // V4 Back bottom-left
     };
-     
+
+    // Index data to share position data of pyramid
+    GLushort indices[] = {
+        0, 1, 2,  // Triangle 1 - front
+        0, 1, 3,  // Triangle 2 - right
+        0, 3, 4,  // Triangle 3 - back
+        0, 2, 4,  // Triangle 4 - left
+        1, 2, 4,  // Triangle 5 - bottom/front
+        1, 3, 4,   // Triangle 6 - bottom/back
+    };
+
+    const GLuint floatsPerVertex = 3;
+    const GLuint floatsPerColor = 4;
 
     glGenVertexArrays(1, &mesh.vao); // we can also generate multiple VAOs or buffers at the same time
-    // binds VAO
     glBindVertexArray(mesh.vao);
 
     // Create 2 buffers: first one for the vertex data; second one for the indices
@@ -243,22 +283,14 @@ void UCreateMesh(GLMesh& mesh)
     glBindBuffer(GL_ARRAY_BUFFER, mesh.vbos[0]); // Activates the buffer
     glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW); // Sends vertex or coordinate data to the GPU
 
-    // Creates a buffer object for the indices
-    GLushort indices[] = { 0, 1, 2, 3, 2, 4 }; // Using index 2 twice
     mesh.nIndices = sizeof(indices) / sizeof(indices[0]);
-
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.vbos[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    // Creates the Vertex Attribute Pointer for the screen coordinates
-    const GLuint floatsPerVertex = 3; // Number of coordinates per vertex
-    const GLuint floatsPerColor = 4;  // (r, g, b, a)
-
-    // Strides between vertex coordinates is 6 (x, y, r, g, b, a). A tightly packed stride is 0.
+    // Strides between vertex coordinates is 6 (x, y, z, r, g, b, a). A tightly packed stride is 0.
     GLint stride = sizeof(float) * (floatsPerVertex + floatsPerColor);// The number of floats before each
 
-    // Creates the Vertex Attribute Pointer
-    // argument 0 references to layout location in vertex shader aPos
+    // Create Vertex Attribute Pointers
     glVertexAttribPointer(0, floatsPerVertex, GL_FLOAT, GL_FALSE, stride, 0);
     glEnableVertexAttribArray(0);
 
@@ -266,7 +298,7 @@ void UCreateMesh(GLMesh& mesh)
     glEnableVertexAttribArray(1);
 }
 
-// destroys VAOs and VBOs
+
 void UDestroyMesh(GLMesh& mesh)
 {
     glDeleteVertexArrays(1, &mesh.vao);
@@ -340,4 +372,5 @@ void UDestroyShaderProgram(GLuint programId)
 {
     glDeleteProgram(programId);
 }
+
 
