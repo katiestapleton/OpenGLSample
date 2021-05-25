@@ -8,13 +8,14 @@ using namespace std; // Uses the standard namespace
 // Unnamed namespace
 namespace
 {
-    const char* const WINDOW_TITLE = "Tutorial 2.8"; // Macro for window title
+    const char* const WINDOW_TITLE = "Inverted BowTie"; // Macro for window title
 
     // Variables for window width and height
-    const int WINDOW_WIDTH = 800;
-    const int WINDOW_HEIGHT = 600;
+    const int WINDOW_WIDTH = 600;
+    const int WINDOW_HEIGHT = 400;
 
-    // Stores the GL data relative to a given mesh
+    // Stores the GL data relative to a given mesh.
+    // Assigns "ID" needed to active and destroy VAOs/VBOs
     struct GLMesh
     {
         GLuint vao;         // Handle for the vertex array object
@@ -46,6 +47,7 @@ void UDestroyShaderProgram(GLuint programId);
 
 
 // Vertex Shader Program Source Code
+// note: aPos- NDC coordinations as a 3D vector
 const char* vertexShaderSource = "#version 440 core\n"
 "layout (location = 0) in vec3 aPos;\n"
 "layout (location = 1) in vec4 colorFromVBO;\n"
@@ -80,7 +82,7 @@ int main(int argc, char* argv[])
     if (!UCreateShaderProgram(vertexShaderSource, fragmentShaderSource, gProgramId))
         return EXIT_FAILURE;
 
-    // Sets the background color of the window to black (it will be implicitely used by glClear)
+    // Sets background color to black
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
     // render loop
@@ -170,7 +172,7 @@ void UResizeWindow(GLFWwindow* window, int width, int height)
 // Functioned called to render a frame
 void URender()
 {
-    // Clear the background
+    // Clear the background. set background to black
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -180,7 +182,7 @@ void URender()
     // Activate the VBOs contained within the mesh's VAO
     glBindVertexArray(gMesh.vao);
 
-    // Draws the triangle
+    // Draws the triangle(s)
     glDrawElements(GL_TRIANGLES, gMesh.nIndices, GL_UNSIGNED_SHORT, NULL); // Draws the triangle
 
     // Deactivate the VAO
@@ -191,38 +193,49 @@ void URender()
 }
 
 
+// transfers vertices containing the location and color of triangle to GPU
 // Implements the UCreateMesh function
 void UCreateMesh(GLMesh& mesh)
 {
     // Specifies Normalized Device Coordinates (x,y,z) and color (r,g,b,a) for triangle vertices
+    /* remember: Screen into NDC: 
+           NDC positions: -1 to 1 (left to right). -1 to 1 (bottom to top)  
+           x width = (x / screen width - 0.5) * 2
+           y height = (y / screen height - 0.5) * -2
+    */
+    
     GLfloat verts[] =
     {
-        // The two triangles will be drawn using indices
+        // Builds two 90deg triangles
+        // Each index # refers to a point location and its color
         // Left triangle indices: 0, 1, 2
-        // Right triangle indices: 3, 2, 4
+        // Right triangle indices: 2, 3, 4
 
         // index 0
-        -0.5f, 0.0f, 0.0f,      // top-first_third of the screen
+        -1.0f, 1.0f, 0.0f,      // far left, top of screen
         1.0f, 0.0f, 0.0f, 1.0f, // red
 
         // index 1
-        -1.0f, -1.0f, 0.0f,     // bottom-left of the screen
+        -1.0f, 0.0f, 0.0f,     // far left, center(h) of screen
         0.0f, 0.0f, 1.0f, 1.0f, // blue
 
-        // index 2
-        0.0f, -1.0f, 0.0f,      // bottom-center of the screen
+        // index 2 (shared point)
+        -0.5f, 0.0f, 0.0f,      // left quarter, center(h) of screen
         0.0f, 1.0f, 0.0f, 1.0f, // green
 
         // index 3
-        0.5f, 0.0f, 0.0f,       // top-second_third of the screen
+        0.0f, 0.0f, 0.0f,       // center, center of screen. 
         1.0f, 0.0f, 0.0f, 1.0f, // red
 
         // index 4
-        1.0f, -1.0f, 0.0f,      // bottom-right of the screen
+        0.0f, -1.0f, 0.0f,      // center(w), bottom of screen
         0.0f, 1.0f, 0.0f, 1.0f  // green
+
     };
+     
 
     glGenVertexArrays(1, &mesh.vao); // we can also generate multiple VAOs or buffers at the same time
+    // binds VAO
     glBindVertexArray(mesh.vao);
 
     // Create 2 buffers: first one for the vertex data; second one for the indices
@@ -245,6 +258,7 @@ void UCreateMesh(GLMesh& mesh)
     GLint stride = sizeof(float) * (floatsPerVertex + floatsPerColor);// The number of floats before each
 
     // Creates the Vertex Attribute Pointer
+    // argument 0 references to layout location in vertex shader aPos
     glVertexAttribPointer(0, floatsPerVertex, GL_FLOAT, GL_FALSE, stride, 0);
     glEnableVertexAttribArray(0);
 
@@ -252,7 +266,7 @@ void UCreateMesh(GLMesh& mesh)
     glEnableVertexAttribArray(1);
 }
 
-
+// destroys VAOs and VBOs
 void UDestroyMesh(GLMesh& mesh)
 {
     glDeleteVertexArrays(1, &mesh.vao);
