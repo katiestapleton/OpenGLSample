@@ -1,9 +1,10 @@
 ﻿ /*
 Katie Stapleton
 SNHU CS 330
-Mod3 Assignment
-05/22/2021
+Mod3 Milestone - Complex Object
+05/23/2021
 */
+
 #include <iostream>         // cout, cerr
 #include <cstdlib>          // EXIT_FAILURE
 #include <GL/glew.h>        // GLEW library
@@ -206,7 +207,7 @@ void URender()
     // 1. Scales the object by 2
     glm::mat4 scale = glm::scale(glm::vec3(2.0f, 2.0f, 2.0f));
     // 2. Rotates shape by 15 degrees in the x axis
-    glm::mat4 rotation = glm::rotate(45.0f, glm::vec3(0.5, 1.0f, 0.25f));
+    glm::mat4 rotation = glm::rotate(45.0f, glm::vec3(1.0, 1.0f, 1.0f));
     // 3. Place object at the origin
     glm::mat4 translation = glm::translate(glm::vec3(0.0f, 0.0f, 0.0f));
     // Model matrix: transformations are applied right-to-left order
@@ -214,9 +215,6 @@ void URender()
 
     // Transforms the camera: move the camera back (z axis)
     glm::mat4 view = glm::translate(glm::vec3(0.0f, 0.0f, -5.0f));
-
-    // Creates a perspective projection
- //   glm::mat4 projection = glm::perspective(45.0f, (GLfloat)WINDOW_WIDTH / (GLfloat)WINDOW_HEIGHT, 0.1f, 100.0f);
 
     // Creates a orthographic projection
     glm::mat4 projection = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.1f, 100.0f);
@@ -237,7 +235,7 @@ void URender()
     glBindVertexArray(gMesh.vao);
 
     // Draws the triangles
-    glDrawElements(GL_TRIANGLES, gMesh.nIndices, GL_UNSIGNED_SHORT, NULL); // Draws the triangle
+    glDrawElements(GL_TRIANGLES_STRIP, gMesh.nIndices, GL_UNSIGNED_SHORT, NULL); // Draws the triangle
 
     // Deactivate the Vertex Array Object
     glBindVertexArray(0);
@@ -250,26 +248,28 @@ void URender()
 // Implements the UCreateMesh function
 void UCreateMesh(GLMesh& mesh)
 {
-    // Using indexed drawing- store only the unique vertices and then specify the order at which we want to draw these vertices in.
-    // Position and Color data of pyramid
+    // Position and Color data
     GLfloat verts[] = {
+
+        // SOURCE: Triangle strips https://stackoverflow.com/questions/28375338/cube-using-single-gl-triangle-strip
         // Vertex Positions    // Colors (r,g,b,a)
-         0.0f,  0.5f, 0.0f,   1.0f, 0.5f, 0.0f, 1.0f, // V0 Top center vertex
-         0.5f, -0.5f, 0.5f,   0.0f, 1.0f, 0.5f, 1.0f, // V1 Front Bottom-Right
-        -0.5f, -0.5f, 0.5f,   0.5f, 0.0f, 1.0f, 1.0f, // V2 Front Bottom-Left
-        
-         0.5f,  -0.5f, -0.5f,   1.0f, 0.0f, 1.0f, 1.0f, // V3 Back bottom-right
-         -0.5f, -0.5f, -0.5f,  0.5f, 0.5f, 1.0f, 1.0f, // V4 Back bottom-left
+        // CUBE: front
+         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f, 1.0f, // 0 front- top right
+        -0.5f,  0.5f, 0.0f,   0.0f, 1.0f, 0.0f, 1.0f, // 1 front- top left
+         0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f, 1.0f, // 2 front- bottom right 
+        -0.5f, -0.5f, 0.0f,   1.0f, 0.0f, 1.0f, 1.0f, // 3 front- bottom left
+
+        // CUBE: back
+         0.5f,  0.5f, -1.0f,  0.5f, 0.5f, 1.0f, 1.0f, //  4 back- top right
+        -0.5f,  0.5f, -1.0f,  1.0f, 1.0f, 0.5f, 1.0f, //  5 back- top left
+         0.5f, -0.5f, -1.0f,  0.2f, 0.2f, 0.5f, 1.0f, //  6 back- bottom right
+        -0.5f, -0.5f, -1.0f,  1.0f, 0.0f, 1.0f, 1.0f  //  7 back- bottom left
     };
 
-    // Index data to share position data of pyramid
+    // Index data to share position data
     GLushort indices[] = {
-        0, 1, 2,  // Triangle 1 - front
-        0, 1, 3,  // Triangle 2 - right
-        0, 3, 4,  // Triangle 3 - back
-        0, 2, 4,  // Triangle 4 - left
-        1, 2, 4,  // Triangle 5 - bottom/front
-        1, 3, 4,   // Triangle 6 - bottom/back
+        3, 2, 6, 7, 4, 2, 0,
+        3, 1, 6, 5, 4, 1, 0
     };
 
     const GLuint floatsPerVertex = 3;
@@ -372,5 +372,4 @@ void UDestroyShaderProgram(GLuint programId)
 {
     glDeleteProgram(programId);
 }
-
 
