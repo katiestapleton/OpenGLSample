@@ -207,7 +207,7 @@ void URender()
     // 1. Scales the object by 2
     glm::mat4 scale = glm::scale(glm::vec3(2.0f, 2.0f, 2.0f));
     // 2. Rotates shape by 15 degrees in the x axis
-    glm::mat4 rotation = glm::rotate(45.0f, glm::vec3(1.0, 1.0f, 1.0f));
+    glm::mat4 rotation = glm::rotate(75.0f, glm::vec3(0.5, 1.0f, 0.5f));
     // 3. Place object at the origin
     glm::mat4 translation = glm::translate(glm::vec3(0.0f, 0.0f, 0.0f));
     // Model matrix: transformations are applied right-to-left order
@@ -235,7 +235,7 @@ void URender()
     glBindVertexArray(gMesh.vao);
 
     // Draws the triangles
-    glDrawElements(GL_TRIANGLES_STRIP, gMesh.nIndices, GL_UNSIGNED_SHORT, NULL); // Draws the triangle
+    glDrawElements(GL_TRIANGLE_STRIP, gMesh.nIndices, GL_UNSIGNED_SHORT, NULL); // Draws the triangle
 
     // Deactivate the Vertex Array Object
     glBindVertexArray(0);
@@ -250,26 +250,26 @@ void UCreateMesh(GLMesh& mesh)
 {
     // Position and Color data
     GLfloat verts[] = {
-
+        // CUBE/cuboid  
         // SOURCE: Triangle strips https://stackoverflow.com/questions/28375338/cube-using-single-gl-triangle-strip
         // Vertex Positions    // Colors (r,g,b,a)
-        // CUBE: front
-         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f, 1.0f, // 0 front- top right
-        -0.5f,  0.5f, 0.0f,   0.0f, 1.0f, 0.0f, 1.0f, // 1 front- top left
-         0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f, 1.0f, // 2 front- bottom right 
-        -0.5f, -0.5f, 0.0f,   1.0f, 0.0f, 1.0f, 1.0f, // 3 front- bottom left
+        1.0f,  1.0f, 1.0f,   1.0f, 0.0f, 0.0f, 1.0f, // 0 right top front 
+        0.0f,  1.0f, 1.0f,   1.0f, 0.0f, 0.0f, 1.0f, // 1 left top front
+        1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f, 1.0f, // 2 right top back
+        0.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f, 1.0f, // 3 left top back
 
-        // CUBE: back
-         0.5f,  0.5f, -1.0f,  0.5f, 0.5f, 1.0f, 1.0f, //  4 back- top right
-        -0.5f,  0.5f, -1.0f,  1.0f, 1.0f, 0.5f, 1.0f, //  5 back- top left
-         0.5f, -0.5f, -1.0f,  0.2f, 0.2f, 0.5f, 1.0f, //  6 back- bottom right
-        -0.5f, -0.5f, -1.0f,  1.0f, 0.0f, 1.0f, 1.0f  //  7 back- bottom left
+         1.0f, 0.0f,  1.0f,  0.0f, 1.0f, 1.0f, 1.0f, // 4 right bottom front
+         0.0f, 0.0f,  1.0f,  0.0f, 1.0f, 1.0f, 1.0f, // 5 left bottom front
+         0.0f, 0.0f,  0.0f,  0.0f, 0.0f, 1.0f, 1.0f, // 6 right bottom back
+         1.0f, 0.0f,  0.0f,  0.0f, 0.0f, 1.0f, 1.0f  // 7 left bottom back
+        
     };
 
     // Index data to share position data
     GLushort indices[] = {
-        3, 2, 6, 7, 4, 2, 0,
-        3, 1, 6, 5, 4, 1, 0
+         3, 2, 6, 7, 4, 2, 0,
+         3, 1, 6, 5, 4, 1, 0
+ 
     };
 
     const GLuint floatsPerVertex = 3;
