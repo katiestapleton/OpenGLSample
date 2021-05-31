@@ -1,4 +1,4 @@
-﻿ /*
+/*
 Katie Stapleton
 SNHU CS 330
 Mod3 Milestone - Complex Object
@@ -28,8 +28,8 @@ namespace
     const char* const WINDOW_TITLE = "Tutorial 3.5"; // Macro for window title
 
     // Variables for window width and height
-    const int WINDOW_WIDTH = 1200;
-    const int WINDOW_HEIGHT = 650;
+    const int WINDOW_WIDTH = 800;
+    const int WINDOW_HEIGHT = 600;
 
     // Stores the GL data relative to a given mesh
     struct GLMesh
@@ -45,23 +45,22 @@ namespace
     GLMesh gMesh;
     // Shader program
     GLuint gProgramId;
-}
+};
 
-/* User-defined Function prototypes to:
- * initialize the program, set the window size,
- * redraw graphics on the window when resized,
- * and render graphics on the screen
- */
-bool UInitialize(int, char* [], GLFWwindow** window);
-void UResizeWindow(GLFWwindow* window, int width, int height);
-void UProcessInput(GLFWwindow* window);
-void UCreateMesh(GLMesh& mesh);
-void UDestroyMesh(GLMesh& mesh);
-void createScene();
-void URender();
-bool UCreateShaderProgram(const char* vtxShaderSource, const char* fragShaderSource, GLuint& programId);
-void UDestroyShaderProgram(GLuint programId);
-
+/////////////////////////////////
+// define custom functions
+// 
+//  
+bool initialize(int, char* [], GLFWwindow** window);
+void resizeWindow(GLFWwindow* window, int width, int height);
+void processInput(GLFWwindow* window);
+void setCamera();
+void setProjection();
+void rendering();
+bool createShaderProgram(const char* vtxShaderSource, const char* fragShaderSource, GLuint& programId);
+void destroyShaderProgram(GLuint programId);
+void createMesh(GLMesh& mesh);
+void destroyMesh(GLMesh& mesh);
 
 /* Vertex Shader Source Code*/
 const GLchar* vertexShaderSource = GLSL(440,
@@ -96,53 +95,51 @@ void main()
 );
 
 
+// PARTIAL COMPLETE - NEEDS RENDERING/DRAWING
+// MAIN
 int main(int argc, char* argv[])
 {
-    if (!UInitialize(argc, argv, &gWindow))
+    if (!initialize(argc, argv, &gWindow))
         return EXIT_FAILURE;
 
-    // Create the mesh
-    UCreateMesh(gMesh); // Calls the function to create the Vertex Buffer Object
-
     // Create the shader program
-    if (!UCreateShaderProgram(vertexShaderSource, fragmentShaderSource, gProgramId))
+    if (!createShaderProgram(vertexShaderSource, fragmentShaderSource, gProgramId))
         return EXIT_FAILURE;
 
     // Sets the background color of the window to black (it will be implicitely used by glClear)
-    // Converts standard RGB decimal colors (r, g, b, a) into floats.
-    // RGB = (1.0f/255.0) * decimalCode; It doesn't hurt to add .0 to the end
-    float red = (1.0f / 255.0) * 0.0;
-    float grn = (1.0f / 255.0) * 55.0;
-    float blu = (1.0f / 255.0) * 55.0;
-    glClearColor(red, grn, blu, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
 
     // render loop
-    // -----------
     while (!glfwWindowShouldClose(gWindow))
     {
-        // input
-        // -----
-        UProcessInput(gWindow);
+        // handles user input
+        processInput(gWindow);
 
-        // Render this frame
-        createScene();
-        URender();
+        createMesh(gMesh);
+        // set project
+        setCamera();
+        setProjection();
+
+        // draw/render frames
+        rendering();
 
         glfwPollEvents();
     }
 
-    // Release mesh data
-    UDestroyMesh(gMesh);
+    // RELEASE MESH
+    destroyMesh(gMesh);
 
-    // Release shader program
-    UDestroyShaderProgram(gProgramId);
+    // terminate shader program
+    destroyShaderProgram(gProgramId);
 
     exit(EXIT_SUCCESS); // Terminates the program successfully
 }
 
 
-// Initialize GLFW, GLEW, and create a window
-bool UInitialize(int argc, char* argv[], GLFWwindow** window)
+// DONE-----------------------
+// Initialize GLFW, GLEW, and create a window with GLFW
+bool initialize(int argc, char* argv[], GLFWwindow** window)
 {
     // GLFW: initialize and configure
     // ------------------------------
@@ -165,7 +162,7 @@ bool UInitialize(int argc, char* argv[], GLFWwindow** window)
         return false;
     }
     glfwMakeContextCurrent(*window);
-    glfwSetFramebufferSizeCallback(*window, UResizeWindow);
+    glfwSetFramebufferSizeCallback(*window, resizeWindow);
 
     // GLEW: initialize
     // ----------------
@@ -186,117 +183,85 @@ bool UInitialize(int argc, char* argv[], GLFWwindow** window)
 }
 
 
+// DONE-----------------------
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-void UProcessInput(GLFWwindow* window)
+void processInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 }
 
 
+// DONE-----------------------
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
-void UResizeWindow(GLFWwindow* window, int width, int height)
+void resizeWindow(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
 
-void createScene()
-{    // Enable z-depth
-    glEnable(GL_DEPTH_TEST);
 
-    // clear background
-    glClearColor(0.1f, 0.1f, 0.1f, 0.0f);
-    // clear z buffer
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Transforms the camera: move the camera back (z axis)
-    glm::mat4 view = glm::translate(glm::vec3(0.0f, 0.0f, 10.0f));
-    GLint viewLoc = glGetUniformLocation(gProgramId, "view");
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+// DONE-----------------------
+// set projection for program (ortho or perspective)
+// do not delete unused project. comment out only
+void setProjection()
+{
+    // creates orthogonal projection
+    glm::mat4 projection = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.1f, 100.0f);
 
-    // Creates a orthographic projection
-    glm::mat4 projection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 100.0f);
     GLint projLoc = glGetUniformLocation(gProgramId, "projection");
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+    /* ortho is currently active
+    // creates a perspective projection
+    glm::mat4 projection = glm::perspective(45.0f, (GLfloat)WINDOW_WIDTH / (GLfloat)WINDOW_HEIGHT, 0.1f, 100.0f);
+    */
+}
+
+// sets camera position and viewing direction
+void setCamera() {
+
+    // Enable z-depth
+    glEnable(GL_DEPTH_TEST);
+
+    //glMatrixMode(GL_MODELVIEW);
+     //glLoadIdentity();
+     //gluLookAt(posX, posY, posZ, targetX, targetY, targetZ, 0, 1, 0); // eye(x,y,z), focal(x,y,z), up(x,y,z)
+
+
+ // Transforms the camera: move the camera back (z axis)
+    glm::mat4 view = glm::translate(glm::vec3(0.0f, 0.0f, -5.0f));
+    GLint viewLoc = glGetUniformLocation(gProgramId, "view");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+}
+
+void rendering()
+{
+    // Clear the frame and z buffers
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // 1. Scales the object by 2
+    glm::mat4 scale = glm::scale(glm::vec3(2.0f, 2.0f, 2.0f));
+    // 2. Rotates shape by 15 degrees in the x axis
+    glm::mat4 rotation = glm::rotate(75.0f, glm::vec3(0.5, 1.0f, 0.5f));
+    // 3. Place object at the origin
+    glm::mat4 translation = glm::translate(glm::vec3(0.0f, 0.0f, 0.0f));
+    // Model matrix: transformations are applied right-to-left order
+    glm::mat4 model = translation * rotation * scale;
+
     // Set the shader to be used
     glUseProgram(gProgramId);
-};
 
-// Functioned called to render a frame
-void URender()
-{
-
-
-    // declare objects
-    glm::mat4 scale;
-    glm::mat4 rotation;
-    glm::mat4 translation;
-    glm::mat4 model = translation * rotation * scale;;
-    GLint modelLoc;
-   
-
-    // **********************************
-    // dresser cuboid
-    // create model view: scale, rotate, translate
-    scale = glm::scale(glm::vec3(1.0f, 5.8f, 5.0f));
-    rotation = glm::rotate(0.0f, glm::vec3(0.0f, 5.0f, 5.0f));
-    translation = glm::translate(glm::vec3(1.0f, 5.0f, 5.0f));
-    
-    // Model matrix: transformations are applied right-to-left order
-    model = translation * rotation * scale;
     // Retrieves and passes transform matrices to the Shader program
-    modelLoc = glGetUniformLocation(gProgramId, "model");
+    GLint modelLoc = glGetUniformLocation(gProgramId, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-    // Activate the VBOs contained within the mesh's VA
+    // Activate the VBOs contained within the mesh's VAO
     glBindVertexArray(gMesh.vao);
-    // draws primary dresser cube
+
+    // Draws the triangles
     glDrawElements(GL_TRIANGLE_STRIP, gMesh.nIndices, GL_UNSIGNED_SHORT, NULL); // Draws the triangle
-  
-
-    // **********************************
-    // small legs (4) cuboid
-    // uses same rotation as dresser cuboid. does not need to be redefined
-   
-    // scale for legs (uniform size for all 4 legs)
-    scale = glm::scale(glm::vec3(0.2f, 0.4f, 0.2f));
-    
-    // each leg has a unique position
-    glm::vec3 legPosition[] = {
-    glm::vec3(-3.4f, -1.8f, 1.0f), // right front leg
-    glm::vec3(-4.2f, -1.8f, 1.0f), // left front leg
-    glm::vec3(-3.4f, -1.8f, -1.0f), // right back leg
-    glm::vec3(-4.2f, -1.8f, -1.0f) // left back leg
-    };
-
-    // counts the number of objects
-    int legCount = sizeof(legPosition) / sizeof(legPosition[0]);
-
-    // draws each leg
-    for (unsigned int i = 0; i < legCount; i++)
-    {
-        // recalculates model matrix with new position
-        translation = glm::translate(glm::vec3(legPosition[i]));
-        model = translation * rotation * scale;
-
-        // Retrieves and passes transform matrices to the Shader program
-        modelLoc = glGetUniformLocation(gProgramId, "model");
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-
-
-        // draws each leg
-        glDrawElements(GL_TRIANGLE_STRIP, gMesh.nIndices, GL_UNSIGNED_SHORT, NULL); // Draws the triangle
-    }
-
-
-    translation = glm::translate(glm::vec3(-0.95f, -0.3f, 1.0f));
-    model = translation * rotation * scale;
-
-    modelLoc = glGetUniformLocation(gProgramId, "model");
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-
-
 
     // Deactivate the Vertex Array Object
     glBindVertexArray(0);
@@ -305,31 +270,24 @@ void URender()
     glfwSwapBuffers(gWindow);    // Flips the the back buffer with the front buffer every frame.
 }
 
-
-// Implements the UCreateMesh function
-void UCreateMesh(GLMesh& mesh)
+// Implements the CreateMesh function
+void createMesh(GLMesh& mesh)
 {
-    // color conversion formula
-    //converts RGB decimal colors into floats.
-    // Colors(r, g, b, a) enter as decimal code 0.0 - 255.0 (make sure to include the .0 at the end)
-    float dec = (1.0f / 255.0);
-
-
     // Position and Color data
     GLfloat verts[] = {
         // CUBE/cuboid  
         // SOURCE: Triangle strips https://stackoverflow.com/questions/28375338/cube-using-single-gl-triangle-strip
-        // Vertex Positions    // Colors (r,g,b,a) enter as decimal code 0-255
-        1.0f,  1.0f, 1.0f,   164 * dec, 11 * dec, 273 * dec, 1.0f, // 0 right top front 
-        0.0f,  1.0f, 1.0f,   16 * dec, 116 * dec, 73 * dec, 1.0f, // 1 left top front
-        1.0f,  1.0f, 0.0f,   164 * dec, 11 * dec, 273 * dec, 1.0f, // 2 right top back
-        0.0f,  1.0f, 0.0f,   16 * dec, 116 * dec, 273 * dec, 1.0f, // 3 left top back
+        // Vertex Positions    // Colors (r,g,b,a)
+        1.0f,  1.0f, 1.0f,   1.0f, 0.0f, 0.0f, 1.0f, // 0 right top front 
+        0.0f,  1.0f, 1.0f,   1.0f, 0.0f, 0.0f, 1.0f, // 1 left top front
+        1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f, 1.0f, // 2 right top back
+        0.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f, 1.0f, // 3 left top back
 
-        1.0f, 0.0f,  1.0f,  (0 * dec), (116 * dec), (0 * dec), 1.0f, // 4 right bottom front
-        0.0f, 0.0f,  1.0f,  (164 * dec), (116 * dec), (0 * dec), 1.0f, // 5 left bottom front
-        0.0f, 0.0f,  0.0f,  (164 * dec), (116 * dec), (73 * dec), 1.0f, // 6 right bottom back
-        1.0f, 0.0f,  0.0f,  (164 * dec), (116 * dec), (73 * dec), 1.0f,  // 7 left bottom back
-        
+         1.0f, 0.0f,  1.0f,  0.0f, 1.0f, 1.0f, 1.0f, // 4 right bottom front
+         0.0f, 0.0f,  1.0f,  0.0f, 1.0f, 1.0f, 1.0f, // 5 left bottom front
+         0.0f, 0.0f,  0.0f,  0.0f, 0.0f, 1.0f, 1.0f, // 6 right bottom back
+         1.0f, 0.0f,  0.0f,  0.0f, 0.0f, 1.0f, 1.0f  // 7 left bottom back
+
     };
 
     // Index data to share position data
@@ -341,11 +299,11 @@ void UCreateMesh(GLMesh& mesh)
     const GLuint floatsPerVertex = 3;
     const GLuint floatsPerColor = 4;
 
-    glGenVertexArrays(1, &mesh.vao); // we can also generate multiple VAOs or buffers at the same time
-    glBindVertexArray(mesh.vao);
+    glGenVertexArrays(1, &mesh.vao + 1); // we can also generate multiple VAOs or buffers at the same time
+    glBindVertexArray(mesh.vao + 1);
 
     // Create 2 buffers: first one for the vertex data; second one for the indices
-    glGenBuffers(2, mesh.vbos);
+    glGenBuffers(1, mesh.vbos);
     glBindBuffer(GL_ARRAY_BUFFER, mesh.vbos[0]); // Activates the buffer
     glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW); // Sends vertex or coordinate data to the GPU
 
@@ -365,15 +323,17 @@ void UCreateMesh(GLMesh& mesh)
 }
 
 
-void UDestroyMesh(GLMesh& mesh)
+void destroyMesh(GLMesh& mesh)
 {
     glDeleteVertexArrays(1, &mesh.vao);
     glDeleteBuffers(2, mesh.vbos);
 }
 
 
-// Implements the UCreateShaders function
-bool UCreateShaderProgram(const char* vtxShaderSource, const char* fragShaderSource, GLuint& programId)
+
+// DONE-----------------------
+// create shader program
+bool createShaderProgram(const char* vtxShaderSource, const char* fragShaderSource, GLuint& programId)
 {
     // Compilation and linkage error reporting
     int success = 0;
@@ -434,8 +394,9 @@ bool UCreateShaderProgram(const char* vtxShaderSource, const char* fragShaderSou
 }
 
 
-void UDestroyShaderProgram(GLuint programId)
+// DONE-----------------------
+// destroys shader program
+void destroyShaderProgram(GLuint programId)
 {
     glDeleteProgram(programId);
 }
-
