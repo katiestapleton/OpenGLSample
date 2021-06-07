@@ -232,7 +232,7 @@ void UProcessInput(GLFWwindow* window)
         gCameraPos += cameraOffset * gCameraUp;
     */
 
-    static const float cameraSpeed = 2.5f;
+        static const float cameraSpeed = 2.5f;
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
