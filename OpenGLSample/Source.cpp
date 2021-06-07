@@ -1,10 +1,4 @@
-﻿ /*
-Katie Stapleton
-SNHU CS 330
-Mod3 Assignment
-05/22/2021
-*/
-#include <iostream>         // cout, cerr
+﻿#include <iostream>         // cout, cerr
 #include <cstdlib>          // EXIT_FAILURE
 #include <GL/glew.h>        // GLEW library
 #include <GLFW/glfw3.h>     // GLFW library
@@ -24,7 +18,7 @@ using namespace std; // Standard namespace
 // Unnamed namespace
 namespace
 {
-    const char* const WINDOW_TITLE = "Katie's Assignments"; // Macro for window title
+    const char* const WINDOW_TITLE = "Katie's Assignment"; // Macro for window title
 
     // Variables for window width and height
     const int WINDOW_WIDTH = 800;
@@ -45,10 +39,14 @@ namespace
     // Shader program
     GLuint gProgramId;
 
+    // camera
+    glm::vec3 gCameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+    glm::vec3 gCameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+    glm::vec3 gCameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
     // timing
     float gDeltaTime = 0.0f; // time between current frame and last frame
     float gLastFrame = 0.0f;
-
 
 }
 
@@ -65,7 +63,6 @@ void UDestroyMesh(GLMesh& mesh);
 void URender();
 bool UCreateShaderProgram(const char* vtxShaderSource, const char* fragShaderSource, GLuint& programId);
 void UDestroyShaderProgram(GLuint programId);
-
 void UMousePositionCallback(GLFWwindow* window, double xpos, double ypos);
 void UMouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 void UMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
@@ -123,6 +120,12 @@ int main(int argc, char* argv[])
     // -----------
     while (!glfwWindowShouldClose(gWindow))
     {
+        // per-frame timing
+        // --------------------
+        float currentFrame = glfwGetTime();
+        gDeltaTime = currentFrame - gLastFrame;
+        gLastFrame = currentFrame;
+
         // input
         // -----
         UProcessInput(gWindow);
@@ -168,7 +171,6 @@ bool UInitialize(int argc, char* argv[], GLFWwindow** window)
     }
     glfwMakeContextCurrent(*window);
     glfwSetFramebufferSizeCallback(*window, UResizeWindow);
-
     glfwSetCursorPosCallback(*window, UMousePositionCallback);
     glfwSetScrollCallback(*window, UMouseScrollCallback);
     glfwSetMouseButtonCallback(*window, UMouseButtonCallback);
@@ -195,65 +197,30 @@ bool UInitialize(int argc, char* argv[], GLFWwindow** window)
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 void UProcessInput(GLFWwindow* window)
 {
+    static const float cameraSpeed = 2.5f;
+
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-    /*
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
 
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
+    float cameraOffset = cameraSpeed * gDeltaTime;
 
+    // move scene backward, forward
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        gCameraPos -= cameraOffset * gCameraFront;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        gCameraPos += cameraOffset * gCameraFront;
+    // move scene left, right
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-
+        gCameraPos -= glm::normalize(glm::cross(gCameraFront, gCameraUp)) * cameraOffset;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-
+        gCameraPos += glm::normalize(glm::cross(gCameraFront, gCameraUp)) * cameraOffset;
+    //move scene down, up
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-
+        gCameraPos -= cameraOffset * gCameraUp;
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-    */
-
-
-    bool keypress = false;
-    
-if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS &&
-    glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS)   {
-        cout << "You pressed 2 keys! ";
-        keypress = true;
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)    {
-        cout << "You pressed W! ";
-        keypress = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        cout << "You pressed S! ";
-        keypress = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-    {
-        cout << "You pressed A! ";
-        keypress = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-    {
-        cout << "You pressed D! ";
-        keypress = true;
-    }
-
-    if (keypress)
-    {
-        double x, y;
-        glfwGetCursorPos(window, &x, &y);
-        cout << "Cursor at position (" << x << ", " << y << ")" << endl;
-    }
+        gCameraPos += cameraOffset * gCameraUp;
 
 }
-
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 void UResizeWindow(GLFWwindow* window, int width, int height)
@@ -281,14 +248,17 @@ void URender()
     // Model matrix: transformations are applied right-to-left order
     glm::mat4 model = translation * rotation * scale;
 
-    // Transforms the camera: move the camera back (z axis)
-    glm::mat4 view = glm::translate(glm::vec3(0.0f, 0.0f, -5.0f));
+    // use for drawElement/stationary-Transforms the camera
+    //glm::mat4 view = glm::translate(glm::vec3(0.0f, 0.0f, -5.0f));
+
+    // camera/view transformation.
+    glm::mat4 view = glm::lookAt(gCameraPos, gCameraPos + gCameraFront, gCameraUp);
 
     // Creates a perspective projection
- //   glm::mat4 projection = glm::perspective(45.0f, (GLfloat)WINDOW_WIDTH / (GLfloat)WINDOW_HEIGHT, 0.1f, 100.0f);
+    glm::mat4 projection = glm::perspective(45.0f, (GLfloat)WINDOW_WIDTH / (GLfloat)WINDOW_HEIGHT, 0.1f, 100.0f);
 
     // Creates a orthographic projection
-    glm::mat4 projection = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.1f, 100.0f);
+    //glm::mat4 projection = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.1f, 100.0f);
 
     // Set the shader to be used
     glUseProgram(gProgramId);
@@ -326,8 +296,8 @@ void UCreateMesh(GLMesh& mesh)
          0.0f,  0.5f, 0.0f,   1.0f, 0.5f, 0.0f, 1.0f, // V0 Top center vertex
          0.5f, -0.5f, 0.5f,   0.0f, 1.0f, 0.5f, 1.0f, // V1 Front Bottom-Right
         -0.5f, -0.5f, 0.5f,   0.5f, 0.0f, 1.0f, 1.0f, // V2 Front Bottom-Left
-        
-         0.5f,  -0.5f, -0.5f,   1.0f, 0.0f, 1.0f, 1.0f, // V3 Back bottom-right
+
+         0.5f,  -0.5f, -0.5f,  1.0f, 0.0f, 1.0f, 1.0f, // V3 Back bottom-right
          -0.5f, -0.5f, -0.5f,  0.5f, 0.5f, 1.0f, 1.0f, // V4 Back bottom-left
     };
 
