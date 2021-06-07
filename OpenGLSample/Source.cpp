@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "camera.h"
 
 using namespace std; // Standard namespace
 
@@ -39,10 +40,19 @@ namespace
     // Shader program
     GLuint gProgramId;
 
-    // camera
+    /*
+    // camera - stationary
     glm::vec3 gCameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
     glm::vec3 gCameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
     glm::vec3 gCameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+    */
+
+    // camera - interactive
+    Camera gCamera(glm::vec3(0.0f, 0.0f, 3.0f));
+    float gLastX = WINDOW_WIDTH / 2.0f;
+    float gLastY = WINDOW_HEIGHT / 2.0f;
+    bool gFirstMouse = true;
+
 
     // timing
     float gDeltaTime = 0.0f; // time between current frame and last frame
@@ -204,6 +214,7 @@ void UProcessInput(GLFWwindow* window)
 
     float cameraOffset = cameraSpeed * gDeltaTime;
 
+    /* stationary view
     // move scene backward, forward
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
         gCameraPos -= cameraOffset * gCameraFront;
@@ -219,7 +230,21 @@ void UProcessInput(GLFWwindow* window)
         gCameraPos -= cameraOffset * gCameraUp;
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
         gCameraPos += cameraOffset * gCameraUp;
+    */
 
+    static const float cameraSpeed = 2.5f;
+
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        gCamera.ProcessKeyboard(FORWARD, gDeltaTime);
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        gCamera.ProcessKeyboard(BACKWARD, gDeltaTime);
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        gCamera.ProcessKeyboard(LEFT, gDeltaTime);
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        gCamera.ProcessKeyboard(RIGHT, gDeltaTime);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -251,11 +276,16 @@ void URender()
     // use for drawElement/stationary-Transforms the camera
     //glm::mat4 view = glm::translate(glm::vec3(0.0f, 0.0f, -5.0f));
 
-    // camera/view transformation.
-    glm::mat4 view = glm::lookAt(gCameraPos, gCameraPos + gCameraFront, gCameraUp);
+    // camera/view transformation - stationary
+    //glm::mat4 view = glm::lookAt(gCameraPos, gCameraPos + gCameraFront, gCameraUp);
+
+    // camera/view transformation - interactive
+    glm::mat4 view = gCamera.GetViewMatrix();
+
 
     // Creates a perspective projection
-    glm::mat4 projection = glm::perspective(45.0f, (GLfloat)WINDOW_WIDTH / (GLfloat)WINDOW_HEIGHT, 0.1f, 100.0f);
+    //glm::mat4 projection = glm::perspective(45.0f, (GLfloat)WINDOW_WIDTH / (GLfloat)WINDOW_HEIGHT, 0.1f, 100.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(gCamera.Zoom), (GLfloat)WINDOW_WIDTH / (GLfloat)WINDOW_HEIGHT, 0.1f, 100.0f);
 
     // Creates a orthographic projection
     //glm::mat4 projection = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.1f, 100.0f);
@@ -416,7 +446,20 @@ void UDestroyShaderProgram(GLuint programId)
 // -------------------------------------------------------
 void UMousePositionCallback(GLFWwindow* window, double xpos, double ypos)
 {
-    cout << "Mouse at (" << xpos << ", " << ypos << ")" << endl;
+    if (gFirstMouse)
+    {
+        gLastX = xpos;
+        gLastY = ypos;
+        gFirstMouse = false;
+    }
+
+    float xoffset = xpos - gLastX;
+    float yoffset = gLastY - ypos; // reversed since y-coordinates go from bottom to top
+
+    gLastX = xpos;
+    gLastY = ypos;
+
+    gCamera.ProcessMouseMovement(xoffset, yoffset);;
 }
 
 
@@ -424,7 +467,7 @@ void UMousePositionCallback(GLFWwindow* window, double xpos, double ypos)
 // ----------------------------------------------------------------------
 void UMouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    cout << "Mouse wheel (" << xoffset << ", " << yoffset << ")" << endl;
+    gCamera.ProcessMouseScroll(yoffset);
 }
 
 // glfw: handle mouse button events
