@@ -18,7 +18,7 @@ using namespace std; // Standard namespace
 // Unnamed namespace
 namespace
 {
-    const char* const WINDOW_TITLE = "Katie's Assignment"; // Macro for window title
+    const char* const WINDOW_TITLE = "Katie's Assignments"; // Macro for window title
 
     // Variables for window width and height
     const int WINDOW_WIDTH = 800;
