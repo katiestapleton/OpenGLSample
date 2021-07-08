@@ -179,10 +179,18 @@ int main(void) {
 	glfwMakeContextCurrent(window);
 	glfwSwapInterval(1);
 
-	Brick brick(REFLECTIVE, 0.5, -0.33, 0.2, 1, 1, 0);
-	Brick brick2(DESTRUCTABLE, -0.5, 0.33, 0.2, 0, 1, 0);
-	Brick brick3(DESTRUCTABLE, -0.5, -0.33, 0.2, 0, 1, 1);
-	Brick brick4(REFLECTIVE, 0, 0, 0.2, 1, 0.5, 0.5);
+	Brick brick(REFLECTIVE,     0.19, -0.64, 0.17, 0.53, 0.29, 0.87);
+	Brick brick1(REFLECTIVE,    0.00, 0.00, 0.00,  1.0, 0.97, 0.30);
+	Brick brick2(DESTRUCTABLE, -0.51, 0.50, 0.19,  1.0, 0.82, 0.23);
+	Brick brick3(DESTRUCTABLE,  0.75, 0.27, 0.23, 0.0, 0.43, 1.0);
+	// center box. do not change coordinates for brick 4
+	Brick brick4(REFLECTIVE,    0, 0, 0.2, 1, 0.5, 0.5);
+	Brick brick5(DESTRUCTABLE, -0.15, 0.63, 0.22,  0.94, 0.32, 0.17);
+	Brick brick6(DESTRUCTABLE,  -0.67, -0.72, 0.12,  0.42, 0.61, 0.67);
+	Brick brick7(DESTRUCTABLE, -0.52, -0.14, 0.33,  0.17, 0.16, 0.73);
+	Brick brick8(REFLECTIVE,   0.64, -0.22, 0.27,  0.48, 0.37, 0.0);
+	Brick brick9(REFLECTIVE,   0.42, 0.72, 0.21,  0.00, 0.8, 0.8);
+
 
 	while (!glfwWindowShouldClose(window)) {
 		//Setup View
@@ -208,9 +216,16 @@ int main(void) {
 		}
 
 		brick.drawBrick();
+		brick1.drawBrick();
 		brick2.drawBrick();
 		brick3.drawBrick();
 		brick4.drawBrick();
+		brick5.drawBrick();
+		brick6.drawBrick();
+		brick7.drawBrick();
+		brick8.drawBrick();
+		brick9.drawBrick();
+
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
