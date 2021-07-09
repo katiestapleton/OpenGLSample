@@ -25,9 +25,9 @@ public:
 	BRICKTYPE brick_type;
 	ONOFF onoff;
 
-	Brick(BRICKTYPE bt, float xx, float yy, float ww, float rr, float gg, float bb)
+	Brick(BRICKTYPE bt, float xx, float yy, float ww, float r, float g, float b)
 	{
-		brick_type = bt; x = xx; y = yy, width = ww; red = rr, green = gg, blue = bb;
+		brick_type = bt; x = xx; y = yy, width = ww; red = r, green = g, blue = b;
 		onoff = ON;
 	};
 
@@ -60,6 +60,8 @@ public:
 	float y;
 	float speed = 0.03;
 	int direction; // 1=up 2=right 3=down 4=left 5 = up right   6 = up left  7 = down right  8= down left
+	ONOFF onoff;
+
 
 	Circle(double xx, double yy, double rr, int dir, float rad, float r, float g, float b)
 	{
@@ -71,25 +73,55 @@ public:
 		blue = b;
 		radius = rad;
 		direction = dir;
+		onoff = ON;
 	}
 
-	void CheckCollision(Brick* brk)
+	// random color generator for collisions
+	// converts into decimal
+	int GetRandomColor()
+	{
+		float color = (rand() % 256) / 256;
+		float absColor = abs(color)+0.1;
+		return absColor;
+	}
+	
+	void CheckCollision(Brick* brk, Circle* cir)
 	{
 		if (brk->brick_type == REFLECTIVE)
 		{
+			// uses random color generator function to retrieve color
+			float redNew = GetRandomColor();
+			float greenNew = GetRandomColor();
+			float blueNew = GetRandomColor();
+
 			if ((x > brk->x - brk->width && x <= brk->x + brk->width) && (y > brk->y - brk->width && y <= brk->y + brk->width))
 			{
 				direction = GetRandomDirection();
 				x = x + 0.03;
 				y = y + 0.04;
+
+				// assigned new color to brick color upon collision
+				brk->red = redNew;
+				brk->green = greenNew;
+				brk->blue = blueNew;
+
+				// changes color of ball to match new brick color upon collision
+				cir->red = redNew;
+				cir->green = greenNew;
+				cir->blue = blueNew;
 			}
+
 		}
 		else if (brk->brick_type == DESTRUCTABLE)
 		{
+
 			if ((x > brk->x - brk->width && x <= brk->x + brk->width) && (y > brk->y - brk->width && y <= brk->y + brk->width))
 			{
 				brk->onoff = OFF;
 			}
+
+			//destructable brick: collision makes ball disappear
+			cir->onoff = OFF;
 		}
 	}
 
@@ -97,7 +129,9 @@ public:
 	{
 		return (rand() % 8) + 1;
 	}
+	
 
+	
 	void MoveOneStep()
 	{
 		if (direction == 1 || direction == 5 || direction == 6)  // up
@@ -108,7 +142,9 @@ public:
 			}
 			else
 			{
-				direction = GetRandomDirection();
+				//direction = GetRandomDirection();
+                // applied basic physics to bounce back of ball
+				direction = 3;
 			}
 		}
 
@@ -117,10 +153,14 @@ public:
 			if (x < 1 - radius)
 			{
 				x += speed;
+
 			}
 			else
 			{
-				direction = GetRandomDirection();
+				//direction = GetRandomDirection();
+
+				// applied basic physics to bounce back of ball
+				direction = 4;
 			}
 		}
 
@@ -128,10 +168,14 @@ public:
 		{
 			if (y < 1 - radius) {
 				y += speed;
+
 			}
 			else
 			{
-				direction = GetRandomDirection();
+				//direction = GetRandomDirection();
+
+				// applied basic physics to bounce back of ball
+				direction = 1;
 			}
 		}
 
@@ -142,20 +186,29 @@ public:
 			}
 			else
 			{
-				direction = GetRandomDirection();
+				//direction = GetRandomDirection();
+
+				// applied basic physics to bounce back of ball
+				direction = 2;
 			}
 		}
+
 	}
 
 	void DrawCircle()
 	{
-		glColor3f(red, green, blue);
-		glBegin(GL_POLYGON);
-		for (int i = 0; i < 360; i++) {
-			float degInRad = i * DEG2RAD;
-			glVertex2f((cos(degInRad) * radius) + x, (sin(degInRad) * radius) + y);
+		// circle must be "on" to be drawn
+		if (onoff == ON)
+		{
+			glColor3f(red, green, blue);
+			glBegin(GL_POLYGON);
+			for (int i = 0; i < 360; i++) {
+				float degInRad = i * DEG2RAD;
+				glVertex2f((cos(degInRad) * radius) + x, (sin(degInRad) * radius) + y);
+			}
+
+			glEnd();
 		}
-		glEnd();
 	}
 };
 
@@ -203,16 +256,20 @@ int main(void) {
 
 		processInput(window);
 
+
 		//Movement
 		for (int i = 0; i < world.size(); i++)
 		{
-			world[i].CheckCollision(&brick);
-			world[i].CheckCollision(&brick2);
-			world[i].CheckCollision(&brick3);
-			world[i].CheckCollision(&brick4);
-			world[i].MoveOneStep();
 			world[i].DrawCircle();
 
+			// returns circle from given location in vector. used to check collisions
+			Circle circle = world.at(i);
+
+			world[i].CheckCollision(&brick, &circle);
+			world[i].CheckCollision(&brick2, &circle);
+			world[i].CheckCollision(&brick3, &circle);
+			world[i].CheckCollision(&brick4, &circle);
+			world[i].MoveOneStep();
 		}
 
 		brick.drawBrick();
